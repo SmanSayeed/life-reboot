@@ -1,0 +1,12 @@
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Database Configuration
+POSTGRES_HOST=your-postgres-host
+POSTGRES_URL=your-postgres-url
+
+# Application URL (use localhost for development, update in Vercel for production)
+NEXT_PUBLIC_APP_URL=http://localhost:3000

@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import Link from 'next/link'
-import type { Metadata } from "next"
 
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -19,11 +18,6 @@ const formSchema = z.object({
 })
 
 type FormData = z.infer<typeof formSchema>
-
-export const metadata: Metadata = {
-  title: "Login | Life Reboot",
-  description: "Login to your Life Reboot account",
-}
 
 export default function LoginPage() {
   const { signIn } = useAuth()
