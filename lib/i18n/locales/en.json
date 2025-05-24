@@ -1,0 +1,129 @@
+{
+  "app": {
+    "name": "Life Reboot",
+    "tagline": "Islamic & Psychological Habit Building"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email",
+    "loginButton": "Login with Email",
+    "loginSuccess": "Login link sent to your email",
+    "loginError": "Error sending login link",
+    "magicLinkSent": "Check your email for the login link",
+    "continueAsGuest": "Continue as Guest"
+  },
+  "navigation": {
+    "home": "Home",
+    "today": "Today",
+    "dashboard": "Dashboard",
+    "history": "History",
+    "analytics": "Analytics",
+    "settings": "Settings"
+  },
+  "habits": {
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "evening": "Evening",
+    "completed": "Completed",
+    "addHabit": "Add Habit",
+    "editHabit": "Edit Habit",
+    "deleteHabit": "Delete Habit",
+    "habitTitle": "Habit Title",
+    "habitDescription": "Description",
+    "timeOfDay": "Time of Day",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this habit?",
+    "dragHint": "Drag to move"
+  },
+  "notes": {
+    "title": "Daily Notes",
+    "placeholder": "Write your thoughts, reflections, or plans for the day...",
+    "save": "Save Notes",
+    "saved": "Notes saved",
+    "error": "Error saving notes"
+  },
+  "date": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "selectDate": "Select Date"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "language": "Language",
+    "english": "English",
+    "bengali": "Bengali",
+    "notifications": "Notifications",
+    "enableNotifications": "Enable Notifications",
+    "prayerReminders": "Prayer Reminders",
+    "habitReminders": "Habit Reminders",
+    "dataSync": "Data Synchronization",
+    "syncNow": "Sync Now",
+    "lastSynced": "Last synced"
+  },
+  "offline": {
+    "title": "You're Offline",
+    "message": "Some features may not be available while offline",
+    "continueOffline": "Continue Offline"
+  },
+  "pwa": {
+    "installTitle": "Install App",
+    "installMessage": "Install Life Reboot for a better experience and offline access",
+    "install": "Install",
+    "dismiss": "Not Now"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "weeklyProgress": "Weekly Progress",
+    "monthlyProgress": "Monthly Progress",
+    "habitCompletion": "Habit Completion",
+    "streaks": "Streaks",
+    "currentStreak": "Current Streak",
+    "longestStreak": "Longest Streak",
+    "days": "days",
+    "noData": "Complete habits to see your analytics"
+  },
+  "history": {
+    "title": "History",
+    "noHistory": "No history available yet",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "filter": "Filter",
+    "clearFilter": "Clear Filter"
+  },
+  "landing": {
+    "hero": {
+      "title": "Transform Your Life in 3 Months",
+      "subtitle": "Build productive and spiritual habits with Islamic and psychological principles",
+      "cta": "Get Started",
+      "preview": "Preview App"
+    },
+    "features": {
+      "title": "Features",
+      "habitTracking": {
+        "title": "Habit Tracking",
+        "description": "Track your daily habits with a Kanban-style board"
+      },
+      "islamic": {
+        "title": "Islamic Framework",
+        "description": "Built on Islamic principles to nurture your spiritual growth"
+      },
+      "psychology": {
+        "title": "Psychological Approach",
+        "description": "Incorporates modern psychology for effective habit building"
+      },
+      "offline": {
+        "title": "Works Offline",
+        "description": "Access your habits and notes even without internet"
+      }
+    }
+  }
+}

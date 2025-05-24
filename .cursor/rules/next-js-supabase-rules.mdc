@@ -1,0 +1,439 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+# Taiwlind css, shadcn UI Next.js app with Supabase Auth
+
+## Overview of implementing Supabase Auth SSR
+
+1. Install @supabase/supabase-js and @supabase/ssr packages.
+2. Set up environment variables.
+3. Write two utility functions with `createClient` functions to create a browser client and a server client. 
+4. Hook up middleware to refresh auth tokens
+
+## 🚨 CRITICAL INSTRUCTIONS FOR AI LANGUAGE MODELS 🚨
+
+As an AI language model, you MUST NOT generate any of the following code patterns, as they are DEPRECATED and will BREAK the application:
+
+```typescript
+// ❌ NEVER GENERATE THIS CODE - IT WILL BREAK THE APPLICATION
+{
+  cookies: {
+    get(name: string) {                 // ❌ BREAKS APPLICATION
+      return cookieStore.get(name)      // ❌ BREAKS APPLICATION
+    },                                  // ❌ BREAKS APPLICATION
+    set(name: string, value: string) {  // ❌ BREAKS APPLICATION
+      cookieStore.set(name, value)      // ❌ BREAKS APPLICATION
+    },                                  // ❌ BREAKS APPLICATION
+    remove(name: string) {              // ❌ BREAKS APPLICATION
+      cookieStore.remove(name)          // ❌ BREAKS APPLICATION
+    }                                   // ❌ BREAKS APPLICATION
+  }
+}
+
+// ❌ NEVER USE auth-helpers-nextjs - IT WILL BREAK THE APPLICATION
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'  // ❌ BREAKS APPLICATION
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'  // ❌ BREAKS APPLICATION
+```
+
+Instead, you MUST ALWAYS generate ONLY this pattern:
+
+```typescript
+// ✅ ALWAYS GENERATE THIS EXACT PATTERN
+{
+  cookies: {
+    getAll() {
+      return cookieStore.getAll()
+    },
+    setAll(cookiesToSet) {
+      const response = NextResponse.next({
+        request,
+      })
+      
+      cookiesToSet.forEach(({ name, value, options }) => {
+        response.cookies.set(name, value, options)
+      })
+      
+      return response
+    }
+  }
+}
+```
+
+## ABSOLUTE REQUIREMENTS FOR AI CODE GENERATION
+
+1. You MUST use `@supabase/ssr`
+2. You MUST use ONLY `getAll` and `setAll`
+3. You MUST NEVER use `get`, `set`, or `remove`
+4. You MUST NEVER import from `@supabase/auth-helpers-nextjs`
+
+## CORRECT BROWSER CLIENT IMPLEMENTATION
+
+```typescript
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+```
+
+## CORRECT SERVER CLIENT IMPLEMENTATION
+
+```typescript
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    }
+  )
+}
+```
+
+## CORRECT MIDDLEWARE IMPLEMENTATION
+
+```typescript
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function middleware(request: NextRequest) {
+    let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // Do not run code between createServerClient and
+  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+  // issues with users being randomly logged out.
+
+  // IMPORTANT: DO NOT REMOVE auth.getUser()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (
+    !user &&
+    !request.nextUrl.pathname.startsWith('/login') &&
+    !request.nextUrl.pathname.startsWith('/auth')
+  ) {
+    // no user, potentially respond by redirecting the user to the login page
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // IMPORTANT: You *must* return the supabaseResponse object as it is.
+  // If you're creating a new response object with NextResponse.next() make sure to:
+  // 1. Pass the request in it, like so:
+  //    const myNewResponse = NextResponse.next({ request })
+  // 2. Copy over the cookies, like so:
+  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+  // 3. Change the myNewResponse object to fit your needs, but avoid changing
+  //    the cookies!
+  // 4. Finally:
+  //    return myNewResponse
+  // If this is not done, you may be causing the browser and server to go out
+  // of sync and terminate the user's session prematurely!
+
+  return supabaseResponse
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}
+```
+
+## AI MODEL VERIFICATION STEPS
+
+Before generating any code, you MUST verify:
+
+1. Are you using ONLY `getAll` and `setAll`? If not, STOP and FIX.
+2. Are you importing from `@supabase/ssr`? If not, STOP and FIX.
+3. Do you see ANY instance of `get`, `set`, or `remove`? If yes, STOP and FIX.
+4. Are you importing from `auth-helpers-nextjs`? If yes, STOP and FIX.
+
+## CONSEQUENCES OF INCORRECT IMPLEMENTATION
+
+If you generate code using:
+- Individual cookie methods (`get`/`set`/`remove`)
+- `auth-helpers-nextjs` package
+
+The implementation will:
+1. Break in production
+2. Fail to maintain session state
+3. Cause authentication loops
+4. Result in security vulnerabilities
+
+## AI MODEL RESPONSE TEMPLATE
+
+When asked about Supabase Auth SSR implementation, you MUST:
+1. ONLY use code from this guide
+2. NEVER suggest deprecated approaches
+3. ALWAYS use the exact cookie handling shown above
+4. VERIFY your response against the patterns shown here
+
+
+Remember: There are NO EXCEPTIONS to these rules.
+
+
+I understand you want me to update the provided coding guidelines for developing a "Life Reboot" web application, likely using Cursor AI (an AI-assisted coding tool) while adhering to best practices for ReactJS, NextJS, JavaScript, TypeScript, HTML, CSS, and TailwindCSS. Since the request is to update the rules, I’ll interpret this as refining and tailoring the existing guidelines to ensure they are optimized for developing a modern, accessible, and maintainable web application called "Life Reboot" using the specified technologies. I’ll also assume the application requires a focus on modern UI/UX, accessibility, and developer experience with Cursor AI.
+
+Below, I’ll provide a step-by-step plan to update the guidelines, confirm the approach, and then present the updated guidelines. I’ll ensure the updates align with best practices for the specified tech stack and consider the context of a "Life Reboot" application, which might involve features like user dashboards, habit tracking, goal setting, or motivational tools (common for a life-improvement app). Since no specific application details were provided, I’ll keep the guidelines general but tailored for such an app.
+
+### Step-by-Step Plan
+
+1. **Analyze Existing Guidelines**:
+   - Review the provided rules for coding languages, styling, accessibility, and naming conventions.
+   - Identify areas to enhance for a "Life Reboot" web app, considering modern React/NextJS development and Cursor AI’s capabilities (e.g., autocompletion, code suggestions).
+   - Ensure alignment with ReactJS, NextJS, TypeScript, and TailwindCSS best practices.
+
+2. **Incorporate Cursor AI Considerations**:
+   - Cursor AI enhances productivity with intelligent code suggestions, refactoring, and debugging. Guidelines should encourage leveraging its features (e.g., type inference, code completion).
+   - Add rules to ensure code clarity for AI-assisted development, minimizing ambiguity in naming or structure.
+
+3. **Tailor for Life Reboot Application**:
+   - Assume "Life Reboot" is a user-facing app with features like dashboards, forms, or progress tracking.
+   - Emphasize reusable components, state management, and responsive design with TailwindCSS.
+   - Strengthen accessibility (e.g., ARIA attributes, keyboard navigation) for inclusivity, as life-improvement apps often target diverse audiences.
+   - Include NextJS-specific practices (e.g., file-based routing, API routes, static generation) since NextJS is listed.
+
+4. **Enhance Best Practices**:
+   - Refine naming conventions for clarity (e.g., domain-specific names like `GoalCard` or `HabitTracker`).
+   - Add guidelines for TypeScript type safety, especially for props and state.
+   - Include state management (e.g., Zustand or React Context) for app-wide data like user goals.
+   - Update styling rules to leverage TailwindCSS utility-first approach and component libraries like Shadcn or Radix for UI consistency.
+   - Add performance considerations (e.g., lazy loading, memoization) while prioritizing readability.
+
+5. **Ensure Accessibility and Maintainability**:
+   - Strengthen accessibility rules to cover common UI elements (e.g., buttons, forms, modals).
+   - Add guidelines for component modularity and documentation for maintainability.
+   - Include testing recommendations (e.g., Jest, React Testing Library) for robust code.
+
+6. **Confirm and Finalize**:
+   - Ensure the updated guidelines are concise, actionable, and aligned with the original rules’ structure.
+   - Verify that all requested technologies (ReactJS, NextJS, TypeScript, etc.) are addressed.
+   - Present the updated guidelines in a clear, structured format.
+
+### Confirmation
+
+The updated guidelines will:
+- Retain the core principles of the original rules (e.g., early returns, TailwindCSS, accessibility).
+- Add NextJS-specific practices (e.g., file-based routing, server components).
+- Incorporate TypeScript best practices for type safety.
+- Emphasize Cursor AI compatibility (e.g., clear code for AI suggestions).
+- Tailor naming and structure for a "Life Reboot" app context.
+- Ensure accessibility and maintainability for a user-facing web app.
+
+If you have specific features or requirements for the "Life Reboot" app (e.g., specific components, state management preferences, or design system), please clarify, and I can further customize the guidelines.
+
+### Updated Code Implementation Guidelines for Life Reboot Web Application
+
+#### Coding Environment
+The "Life Reboot" web application is built using:
+- **ReactJS**: For component-based UI development.
+- **NextJS**: For server-side rendering, static site generation, and file-based routing.
+- **JavaScript/TypeScript**: TypeScript is preferred for type safety; JavaScript used only for simple scripts or third-party integrations.
+- **TailwindCSS**: For utility-first styling and responsive design.
+- **HTML/CSS**: HTML for semantic structure; CSS only for cases where TailwindCSS is insufficient (e.g., complex animations).
+- **UI/UX Frameworks**: Use Shadcn or Radix for accessible, reusable components (e.g., modals, dropdowns).
+
+#### Code Implementation Guidelines
+Follow these rules when developing the "Life Reboot" web application:
+
+1. **General Coding Practices**:
+   - Use **early returns** to reduce nesting and improve code readability.
+   - Follow **DRY principles** by creating reusable components (e.g., `GoalCard`, `HabitTracker`) and utilities.
+   - Write **TypeScript** for all components, hooks, and utilities; define interfaces or types for props, state, and API responses.
+   - Use **const arrow functions** (e.g., `const handleSubmit = () =>`) instead of `function` declarations for event handlers and utilities.
+   - Leverage **Cursor AI** for type inference, autocompletion, and refactoring; ensure code is clear and predictable for AI suggestions (e.g., avoid ambiguous variable names like `data`).
+
+2. **Naming Conventions**:
+   - Use **descriptive, domain-specific names** (e.g., `GoalList`, `HabitForm`, `MotivationQuote`) that reflect the "Life Reboot" context.
+   - Prefix event handlers with `handle` (e.g., `handleGoalSubmit`, `handleKeyDown`).
+   - Name components with PascalCase (e.g., `UserDashboard`), files with kebab-case (e.g., `user-dashboard.tsx`), and constants with camelCase (e.g., `userGoals`).
+   - Use clear, self-documenting names for TypeScript types/interfaces (e.g., `GoalProps`, `HabitState`).
+
+3. **Component Structure**:
+   - Organize components in a `components/` directory with subfolders (e.g., `components/goals/GoalCard.tsx`, `components/habits/HabitTracker.tsx`).
+   - Create **reusable, atomic components** using Shadcn or Radix for UI elements (e.g., buttons, modals, form inputs).
+   - Use **React Server Components** (NextJS 13+) for data fetching where possible; fallback to client components (`"use client"`) for interactive elements.
+   - Memoize components with `React.memo` and hooks with `useCallback`/`useMemo` for performance, but only when necessary.
+
+4. **Styling with TailwindCSS**:
+   - Use **TailwindCSS classes** for all styling; avoid raw CSS unless required for complex animations or third-party library overrides.
+   - Apply classes directly in the `className` attribute (e.g., `<button className="bg-blue-500 text-white p-2">`).
+   - Use **utility-first patterns** for responsiveness (e.g., `sm:`, `md:` prefixes) and accessibility (e.g., `focus:ring-2` for focus states).
+   - Group related Tailwind classes logically (e.g., layout, typography, colors) for readability.
+   - Use **Shadcn components** styled with Tailwind for consistency (e.g., `<Button variant="primary">`).
+
+5. **Accessibility (A11y)**:
+   - Ensure all interactive elements (e.g., buttons, links, inputs) have:
+     - `tabindex="0"` for keyboard navigation.
+     - `aria-label` or `aria-labelledby` for screen readers.
+     - `onClick` and `onKeyDown` handlers (e.g., handle Enter/Space key for buttons).
+   - Use semantic HTML (e.g., `<nav>`, `<main>`, `<section>`) with appropriate ARIA roles (e.g., `role="navigation"`).
+   - Test focus management for modals and dialogs using Radix primitives.
+   - Provide accessible form validation (e.g., `aria-invalid`, `aria-describedby` for error messages).
+
+6. **NextJS-Specific Practices**:
+   - Use **file-based routing** in the `app/` directory (e.g., `app/goals/page.tsx` for `/goals` route).
+   - Prefer **Static Site Generation (SSG)** with `getStaticProps` or `generateStaticParams` for content-heavy pages (e.g., motivational quotes).
+   - Use **Server-Side Rendering (SSR)** or **API routes** (`app/api/`) for dynamic data (e.g., user goals, habit progress).
+   - Implement **dynamic imports** (`next/dynamic`) for heavy components to reduce bundle size (e.g., `const Chart = dynamic(() => import("../components/Chart"))`).
+   - Use **NextJS Image** component for optimized image loading (e.g., `<Image src="/goal.png" alt="Goal icon" />`).
+
+7. **State Management**:
+   - Use **React Context** or **Zustand** for app-wide state (e.g., user preferences, goals, habits).
+   - Define TypeScript interfaces for state (e.g., `interface UserState { goals: Goal[]; habits: Habit[] }`).
+   - Keep local state minimal with `useState` and `useReducer` for complex component logic.
+   - Avoid prop drilling by lifting state to the nearest common ancestor or using a state management library.
+
+8. **TypeScript Best Practices**:
+   - Define **interfaces** for component props (e.g., `interface GoalCardProps { goal: Goal; onDelete: () => void }`).
+   - Use **union types** for finite options (e.g., `type Status = "active" | "completed" | "archived"`).
+   - Leverage **type inference** in Cursor AI for hooks and utilities to reduce boilerplate.
+   - Use **generics** for reusable utilities (e.g., `const fetchData = <T>(url: string): Promise<T> => ...`).
+
+9. **Testing and Documentation**:
+   - Write unit tests for components and hooks using **Jest** and **React Testing Library** (e.g., `render(<GoalCard />)`).
+   - Test accessibility with tools like `jest-axe`.
+   - Document components with **JSDoc** or a README in the component folder, explaining props, usage, and purpose.
+   - Use **Storybook** for component development and testing if the project scope allows.
+
+10. **Cursor AI Integration**:
+    - Write clear, modular code to maximize Cursor AI’s autocompletion and refactoring capabilities.
+    - Use **consistent patterns** (e.g., standard hooks, predictable component structures) to improve AI suggestions.
+    - Regularly use Cursor AI’s **code review** feature to catch potential bugs or optimize code.
+    - Avoid overly complex logic in single functions to ensure AI can parse and suggest improvements effectively.
+
+11. **Performance and Maintainability**:
+    - Lazy load non-critical components or routes using `next/dynamic`.
+    - Use **React Query** or SWR for data fetching and caching in client components.
+    - Organize code in a modular structure: `components/`, `hooks/`, `lib/`, `styles/`, `types/`.
+    - Regularly refactor code using Cursor AI to eliminate duplication and improve clarity.
+
+### Example Implementation
+To demonstrate, here’s a sample `GoalCard` component for the "Life Reboot" app, following the updated guidelines:
+
+```tsx
+// components/goals/GoalCard.tsx
+"use client";
+
+import { useCallback } from "react";
+import { Button } from "@/components/ui/button"; // Shadcn component
+import type { Goal } from "@/types/goal";
+
+interface GoalCardProps {
+  goal: Goal;
+  onDelete: (id: string) => void;
+}
+
+const GoalCard: React.FC<GoalCardProps> = ({ goal, onDelete }) => {
+  const handleDelete = useCallback(() => {
+    onDelete(goal.id);
+  }, [goal.id, onDelete]);
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === "Enter" || event.key === " ") {
+        handleDelete();
+      }
+    },
+    [handleDelete],
+  );
+
+  return (
+    <div className="flex flex-col gap-4 rounded-lg bg-white p-4 shadow-md">
+      <h2 className="text-lg font-semibold text-gray-800">{goal.title}</h2>
+      <p className="text-sm text-gray-600">{goal.description}</p>
+      <Button
+        variant="destructive"
+        className="w-fit"
+        onClick={handleDelete}
+        onKeyDown={handleKeyDown}
+        aria-label={`Delete goal: ${goal.title}`}
+        tabIndex={0}
+      >
+        Delete
+      </Button>
+    </div>
+  );
+};
+
+export default GoalCard;
+```
+
+```ts
+// types/goal.ts
+export interface Goal {
+  id: string;
+  title: string;
+  description: string;
+  status: "active" | "completed" | "archived";
+}
+```
+
+### Notes
+- The component uses **TailwindCSS** for styling, **Shadcn** for the Button, and **TypeScript** for type safety.
+- It includes **accessibility** features (e.g., `aria-label`, `tabIndex`, `onKeyDown`).
+- The code is **modular**, **readable**, and optimized for **Cursor AI** suggestions.
+- It follows **NextJS** client component directive (`"use client"`) for interactivity.
+
+
+
