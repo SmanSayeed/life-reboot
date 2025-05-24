@@ -6,6 +6,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { LocaleProvider } from "@/components/locale-provider"
 import { ReduxProvider } from "@/lib/redux/provider"
 import PWARegister from "@/components/pwa-register"
+import { Toaster } from '@/components/ui/toaster'
+import { CookieConsent } from '@/components/cookie-consent'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -44,6 +46,8 @@ export default function RootLayout({
             </LocaleProvider>
           </ThemeProvider>
         </ReduxProvider>
+        <Toaster />
+        <CookieConsent />
       </body>
     </html>
   )
