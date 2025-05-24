@@ -1,3 +1,6 @@
+// Import environment variables for development
+import './env.config.js'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
